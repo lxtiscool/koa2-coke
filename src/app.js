@@ -5,9 +5,28 @@ const json = require('koa-json')
 const onerror = require('koa-onerror')
 const bodyparser = require('koa-bodyparser')
 const logger = require('koa-logger')
+const session = require('koa-generic-session');
+const redisStore = require('koa-redis')
 
-const index = require('./routes/index')
-const users = require('./routes/users')
+const index = require('./routes/index.js')
+const users = require('./routes/users.js')
+
+const { REDIS_CONF } = require('./conf/db')
+const { SESSION_SECRET_KEY } = require('./conf/secretKeys')
+
+app.keys = [SESSION_SECRET_KEY]
+app.use(session({
+  key: 'wind.sid', // cookie name 默认是 `koa.sid`
+  prefix: 'wind:sess:', // redis key 的前缀，默认是 `koa:sess:`
+  cookie: {
+    path: '/',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000  // 单位 ms
+  },
+  store: redisStore({
+    all: `${REDIS_CONF.host}:${REDIS_CONF.port}`
+  })
+}))
 
 // error handler
 onerror(app)
@@ -23,6 +42,8 @@ app.use(require('koa-static')(__dirname + '/public'))
 app.use(views(__dirname + '/views', {
   extension: 'ejs'
 }))
+
+// app.use(cors())
 
 // logger
 // app.use(async (ctx, next) => {
